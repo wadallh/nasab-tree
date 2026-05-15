@@ -1,7 +1,12 @@
 import axios from 'axios'
 
+// ✅ قراءة رابط الـ Backend من متغير البيئة
+// إذا لم يوجد، يستخدم localhost للتطوير المحلي
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
 const api = axios.create({
-  baseURL: '/api',
+  // ✅ دمج الرابط مع /api بشكل صحيح
+  baseURL: `${API_URL}/api`,
   headers: { 
     'Content-Type': 'application/json',
     'Accept': 'application/json'
@@ -43,8 +48,6 @@ api.interceptors.response.use(
       console.error('🔑 Token expired or invalid! Clearing storage...')
       localStorage.removeItem('token')
       localStorage.removeItem('user')
-      // لا تقم بالإعادة التلقائية للدخول الآن للتشخيص
-      // window.location.href = '/login'
     }
     return Promise.reject(error)
   }
