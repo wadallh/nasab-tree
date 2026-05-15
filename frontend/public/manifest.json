@@ -1,0 +1,10 @@
+{
+  "name": "شجرة النسب",
+  "short_name": "النسب",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1e40af",
+  "dir": "rtl",
+  "lang": "ar"
+}
