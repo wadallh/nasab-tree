@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 // 🔒 رابط ثابت ومضمون 100%
-const API_BASE = 'https://nasab-tree.onrender.com'
+const API_BASE = import.meta.env.VITE_API_URL || window.location.origin
 
 const api = axios.create({
   baseURL: `${API_BASE}/api`,

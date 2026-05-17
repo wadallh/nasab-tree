@@ -1,17 +1,13 @@
-# frontend/netlify.toml
-
 [build]
   command = "npm run build"
   publish = "dist"
 
-# ✅ إعادة توجيه طلبات /api إلى Render (الباك إند)
 [[redirects]]
   from = "/api/*"
   to = "https://nasab-tree.onrender.com/api/:splat"
   status = 200
   force = true
 
-# ✅ إصلاح مشكلة الصفحات عند التحديث (لـ React Router)
 [[redirects]]
   from = "/*"
   to = "/index.html"
