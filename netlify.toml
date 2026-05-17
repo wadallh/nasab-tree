@@ -3,14 +3,14 @@
   command = "npm run build"
   publish = "dist"
 
-# ✅ تحويل طلبات API إلى Render
+# ✅ تحويل طلبات API إلى Render (Proxy)
 [[redirects]]
   from = "/api/*"
   to = "https://nasab-tree.onrender.com/api/:splat"
   status = 200
   force = true
 
-# ✅ إصلاح مشكلة React Router
+# ✅ إصلاح React Router
 [[redirects]]
   from = "/*"
   to = "/index.html"
