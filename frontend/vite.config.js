@@ -24,13 +24,28 @@ export default defineConfig({
       }
     })
   ],
+  // ✅ إعدادات البناء الصريحة لـ Vercel
+  build: {
+    outDir: 'dist',
+    emptyOutDir: true,
+    sourcemap: false, // تقليل حجم الملفات للإنتاج
+    rollupOptions: {
+      output: {
+        manualChunks: undefined // منع تقسيم الكود لضمان تحميل كل شيء
+      }
+    }
+  },
+  // ✅ إعدادات الخادم المحلي (للتطوير فقط)
   server: {
     port: 5173,
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
-        changeOrigin: true
+        changeOrigin: true,
+        secure: false
       }
     }
-  }
+  },
+  // ✅ ضمان عمل المسارات في الإنتاج
+  base: '/'
 })
