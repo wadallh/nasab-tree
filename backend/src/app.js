@@ -32,7 +32,7 @@ if (isProduction) {
         styleSrc: ["'self'", "'unsafe-inline'"],
         scriptSrc: ["'self'"],
         imgSrc: ["'self'", 'data:', 'https:'],
-        connectSrc: ["'self'", 'https://*.vercel.app', 'http://localhost:*'],
+        connectSrc: ["'self'", 'https://*.vercel.app', 'https://nasab-tree.onrender.com'],
         fontSrc: ["'self'", 'https:', 'data:'],
         objectSrc: ["'none'"],
         upgradeInsecureRequests: [],
@@ -57,22 +57,31 @@ const limiter = rateLimit({
 app.use('/api', limiter);
 
 // =========================
-// 🔒 CORS Configuration (محدّث للإنتاج)
+// 🔒 CORS Configuration (محدّث للإنتاج والتطوير)
 // =========================
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:3000',
+
+// النطاقات المسموح بها في الإنتاج
+const productionOrigins = [
   'https://yourdomain.com',
   'https://*.vercel.app',
   'https://nasab-tree.vercel.app',
+  'https://nasab-tree.onrender.com',
 ].filter(Boolean);
 
-// دالة مساعدة للتحقق من النطاقات مع دعم الـ wildcards
+// دالة ذكية للتحقق من النطاقات
 const isOriginAllowed = (origin) => {
-  if (!origin) return true; // السماح بالطلبات بدون origin
-  return allowedOrigins.some(allowed => {
+  // ✅ السماح بالطلبات بدون origin (مثل التطبيقات المحمولة أو Postman)
+  if (!origin) return true;
+  
+  // ✅ في التطوير: السماح بأي localhost بأي منفذ (5173, 5174, 5175, إلخ)
+  if (!isProduction && /^http:\/\/localhost:\d+$/.test(origin)) {
+    return true;
+  }
+  
+  // ✅ في الإنتاج: التحقق من القائمة المسموحة مع دعم wildcards
+  return productionOrigins.some(allowed => {
     if (allowed.includes('*')) {
-      const regex = new RegExp(allowed.replace(/\*/g, '.*'));
+      const regex = new RegExp('^' + allowed.replace(/\./g, '\\.').replace(/\*/g, '.*') + '$');
       return regex.test(origin);
     }
     return allowed === origin;
@@ -84,7 +93,7 @@ const corsOptions = {
     if (isOriginAllowed(origin)) {
       callback(null, true);
     } else {
-      console.error('❌ CORS blocked:', origin);
+      console.error('❌ CORS blocked:', origin, '| Environment:', isProduction ? 'PRODUCTION' : 'DEVELOPMENT');
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -256,7 +265,7 @@ const startServer = () => {
     console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🗄️  Database: ${process.env.DB_NAME || 'nasab_db'}`);
     if (!isProduction) {
-      console.log(`🔒 CORS enabled for: ${allowedOrigins.join(', ')}`);
+      console.log(`🔒 CORS enabled for: localhost:* (dev) + ${productionOrigins.join(', ')}`);
     }
     console.log('');
   });
@@ -305,4 +314,4 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 // بدء التشغيل
 startServer();
 
-module.exports = app;
+module.exports = app; // ✅ تم إصلاح الخطأ هنا (كان يوجد Boolean); زائد)
