@@ -10,9 +10,8 @@ const getApiUrl = () => {
     return envUrl.trim()
   }
   
-  // 3. إذا لم يوجد، استخدم رابط التطوير المحلي (localhost)
-  // ✅ تم التعديل: من الإنتاج إلى التطوير المحلي
-  return 'http://localhost:3000'
+  // 3. إذا لم يوجد، استخدم رابط الإنتاج الافتراضي (Render)
+  return 'https://nasab-tree.onrender.com'
 }
 
 // ✅ احصل على الرابط النهائي
