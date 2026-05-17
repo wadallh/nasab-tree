@@ -1,33 +1,14 @@
 import axios from 'axios'
 
-// 🔍 تشخيص متغير البيئة (مهم جداً!)
-const envUrl = import.meta.env.VITE_API_URL
-console.log('🔍 DEBUG - import.meta.env.VITE_API_URL:', envUrl)
-console.log('🔍 DEBUG - typeof:', typeof envUrl)
-console.log('🔍 DEBUG - isEmpty:', !envUrl || envUrl.trim() === '')
+// ✅ الحل الجذري: تثبيت رابط الـ Backend يدوياً
+// تم تعطيل قراءة متغير البيئة لتجنب مشاكل Vercel المؤقتة
+const API_URL = 'https://nasab-tree.onrender.com'
 
-// ✅ دالة ذكية لتحديد رابط الـ Backend مع تشخيص مفصل
-const getApiUrl = () => {
-  // 1. حاول قراءة متغير البيئة من Vite
-  const url = import.meta.env.VITE_API_URL
-  
-  // 2. إذا وُجد المتغير وليس فارغاً، استخدمه
-  if (url && typeof url === 'string' && url.trim() !== '') {
-    console.log('✅ Using VITE_API_URL from env:', url.trim())
-    return url.trim()
-  }
-  
-  // 3. إذا لم يوجد، استخدم رابط الإنتاج الافتراضي (Render)
-  console.log('⚠️ VITE_API_URL not found, using fallback:', 'https://nasab-tree.onrender.com')
-  return 'https://nasab-tree.onrender.com'
-}
-
-// ✅ احصل على الرابط النهائي
-const API_URL = getApiUrl()
-console.log('🔗 Final API Base URL:', `${API_URL}/api`)
+console.log('🔗 API Base URL (Hardcoded):', `${API_URL}/api`)
+console.log('🔗 Environment: Production (Vercel)')
 
 const api = axios.create({
-  // ✅ دمج الرابط مع /api بشكل صحيح
+  // ✅ دمج الرابط مع /api بشكل صحيح وثابت
   baseURL: `${API_URL}/api`,
   headers: { 
     'Content-Type': 'application/json',
@@ -57,7 +38,7 @@ api.interceptors.request.use(
       console.warn('⚠️ No token found in localStorage')
     }
     
-    // 🔍 تسجيل URL الكامل للطلب
+    // 🔍 تسجيل URL الكامل للطلب للتأكد من الاتصال الصحيح
     console.log('🌐 Full Request URL:', config.baseURL + config.url)
     return config
   },
