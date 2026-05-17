@@ -32,7 +32,8 @@ if (isProduction) {
         styleSrc: ["'self'", "'unsafe-inline'"],
         scriptSrc: ["'self'"],
         imgSrc: ["'self'", 'data:', 'https:'],
-        connectSrc: ["'self'", 'https://*.vercel.app', 'https://nasab-tree.onrender.com'],
+        // ✅ أضفنا نطاق Netlify للسماح بالاتصال
+        connectSrc: ["'self'", 'https://*.vercel.app', 'https://nasab-tree.onrender.com', 'https://*.netlify.app'],
         fontSrc: ["'self'", 'https:', 'data:'],
         objectSrc: ["'none'"],
         upgradeInsecureRequests: [],
@@ -66,6 +67,9 @@ const productionOrigins = [
   'https://*.vercel.app',
   'https://nasab-tree.vercel.app',
   'https://nasab-tree.onrender.com',
+  // ✅ أضفنا نطاق Netlify للسماح بالاتصال من الواجهة الجديدة
+  'https://*.netlify.app',
+  'https://dapper-gelato-5fca5b.netlify.app',
 ].filter(Boolean);
 
 // دالة ذكية للتحقق من النطاقات
@@ -124,7 +128,7 @@ if (!isProduction) {
 const uploadsPath = path.join(__dirname, '../uploads');
 app.use('/uploads', express.static(uploadsPath, {
   setHeaders: (res, filepath) => {
-    // منع تنفيذ ملفات скриبت في مجلد الـ uploads
+    // منع تنفيذ ملفات سكربت في مجلد الـ uploads
     if (/\.(js|php|exe|sh)$/i.test(filepath)) {
       res.setHeader('Content-Disposition', 'attachment');
     }
@@ -314,4 +318,4 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 // بدء التشغيل
 startServer();
 
-module.exports = app; // ✅ تم إصلاح الخطأ هنا (كان يوجد Boolean); زائد)
+module.exports = app;
