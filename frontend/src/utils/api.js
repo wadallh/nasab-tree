@@ -1,22 +1,22 @@
 import axios from 'axios'
 
-// 🔒 تثبيت الرابط مباشرة في الكود (بدون أي متغيرات بيئة)
+// 🔒 رابط ثابت ومضمون 100%
 const API_BASE = 'https://nasab-tree.onrender.com'
 
 const api = axios.create({
   baseURL: `${API_BASE}/api`,
-  headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+  headers: { 'Content-Type': 'application/json' },
   timeout: 15000
 })
 
-// 🟢 إضافة التوكن تلقائياً
+// إضافة التوكن تلقائياً
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('token')
   if (token) config.headers.Authorization = `Bearer ${token}`
   return config
 })
 
-// 🔴 معالجة الأخطاء
+// معالجة الأخطاء
 api.interceptors.response.use(
   res => res,
   err => {
@@ -29,7 +29,7 @@ api.interceptors.response.use(
   }
 )
 
-// دوال API الأساسية
+// دوال API
 export const login = (fullName, phone) => api.post('/auth/login', { full_name: fullName, phone })
 export const getFamilyTree = () => api.get('/tree')
 export const addPersonDirect = (data) => api.post('/tree/persons', data)
