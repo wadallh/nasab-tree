@@ -1,5 +1,5 @@
-require('dotenv').config({ 
-  path: process.env.NODE_ENV === 'production' ? './.env' : '../.env' 
+require('dotenv').config({
+  path: process.env.NODE_ENV === 'production' ? './.env' : '../.env'
 });
 
 const express = require('express');
@@ -15,35 +15,37 @@ const isProduction = process.env.NODE_ENV === 'production';
 const PORT = process.env.PORT || 3000;
 
 // =========================
-// Proxy (للنشر)
+// Proxy (Render / Vercel)
+// =========================
 if (isProduction) {
   app.set('trust proxy', 1);
 }
 
 // =========================
-// Helmet (أمان)
-if (isProduction) {
-  app.use(
-    helmet({
-      contentSecurityPolicy: false,
-      crossOriginResourcePolicy: { policy: "cross-origin" }
-    })
-  );
-}
+// Security (خفيف ومستقر)
+// =========================
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+  })
+);
 
 // =========================
 // Rate Limit
+// =========================
 app.use(
   '/api',
   rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: isProduction ? 100 : 1000,
+    max: isProduction ? 120 : 1000,
     skip: () => !isProduction
   })
 );
 
 // =========================
-// CORS (نسخة مستقرة بدون تعقيد زائد)
+// CORS (مستقر 100%)
+// =========================
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
@@ -57,36 +59,54 @@ app.use(
     origin: (origin, cb) => {
       if (!origin) return cb(null, true);
 
-      const allowed = allowedOrigins.some(o => {
+      const ok = allowedOrigins.some(o => {
         if (o.includes('*')) {
           return new RegExp('^' + o.replace(/\*/g, '.*') + '$').test(origin);
         }
         return o === origin;
       });
 
-      if (allowed) return cb(null, true);
-
-      console.log('❌ CORS blocked:', origin);
-      return cb(null, false);
+      return ok ? cb(null, true) : cb(null, false);
     },
     credentials: true
   })
 );
 
 // =========================
-// Body Parsers
+// Body Parser
+// =========================
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // =========================
-// Static uploads
+// Static Files
+// =========================
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // =========================
-// Routes Loader
+// Root Test
+// =========================
+app.get('/', (req, res) => {
+  res.json({
+    message: 'NASAB API Running 🚀',
+    status: 'OK',
+    env: process.env.NODE_ENV || 'development'
+  });
+});
+
+// =========================
+// Safe Route Loader (🔥 مهم جداً)
+// =========================
 function loadRoute(file, name) {
   try {
     const route = require(file);
+
+    // 🔴 حماية: لازم يكون router صحيح
+    if (!route || typeof route !== 'function' && !route.stack) {
+      console.log(`❌ ${name} invalid export`);
+      return;
+    }
+
     app.use(`/api/${name}`, route);
     console.log(`✅ ${name} loaded`);
   } catch (e) {
@@ -94,6 +114,9 @@ function loadRoute(file, name) {
   }
 }
 
+// =========================
+// Routes
+// =========================
 loadRoute('./routes/auth', 'auth');
 loadRoute('./routes/tree', 'tree');
 loadRoute('./routes/requests', 'requests');
@@ -104,13 +127,14 @@ loadRoute('./routes/sessions', 'sessions');
 
 // =========================
 // Health Check
+// =========================
 app.get('/api/health', async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT DATABASE() as db');
     res.json({
       status: 'ok',
       db: rows[0].db,
-      time: new Date()
+      time: new Date().toISOString()
     });
   } catch (err) {
     res.status(500).json({
@@ -121,32 +145,26 @@ app.get('/api/health', async (req, res) => {
 });
 
 // =========================
-// 404
+// 404 API
+// =========================
 app.use('/api/*', (req, res) => {
-  res.status(404).json({ error: 'Not Found' });
+  res.status(404).json({ error: 'API Not Found' });
 });
 
 // =========================
 // Error Handler
+// =========================
 app.use((err, req, res, next) => {
-  console.error(err.message);
+  console.error('🔥 Error:', err.message);
   res.status(500).json({ error: 'Server Error' });
 });
 
 // =========================
-// Start Server
-const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📊 Env: ${process.env.NODE_ENV || 'development'}`);
-});
-
+// Start Server (Render Safe)
 // =========================
-// Graceful shutdown
-process.on('SIGINT', async () => {
-  console.log('Shutting down...');
-  server.close();
-  await pool.end();
-  process.exit(0);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📊 Env: ${process.env.NODE_ENV || 'development'}`);
 });
 
 module.exports = app;
