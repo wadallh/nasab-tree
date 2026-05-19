@@ -1,21 +1,19 @@
-// backend/src/db.js
 const mysql = require('mysql2/promise');
 
-// 🔍 تحديد البيئة تلقائياً
 const isProduction = process.env.NODE_ENV === 'production';
 
 console.log('🔌 Attempting database connection...');
 console.log('📊 Environment:', isProduction ? '🟢 PRODUCTION' : '🔧 DEVELOPMENT');
 
 const pool = mysql.createPool({
-  host: 'sql12.freesqldatabase.com',
-  port: 3306,
-  user: 'sql12827422',
-  password: 'GTfa7Xtnjs',
-  database: 'sql12827422',
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT || 3306,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
 
-  // ❌ تعطيل SSL لأنه يسبب مشاكل مع الاستضافات المجانية
-  ssl: false,
+  // ❌ مهم جداً: لا تستخدم SSL نهائياً
+  ssl: undefined,
 
   waitForConnections: true,
   connectionLimit: 10,
@@ -24,7 +22,6 @@ const pool = mysql.createPool({
   connectTimeout: 10000
 });
 
-// 🔁 اختبار الاتصال
 async function testConnection() {
   try {
     const connection = await pool.getConnection();
@@ -38,28 +35,13 @@ async function testConnection() {
     console.log('📊 Database info:', rows[0]);
 
     connection.release();
-
   } catch (err) {
-
     console.error('❌ Database connection FAILED');
     console.error('Code:', err.code);
     console.error('Message:', err.message);
-
-    if (err.code === 'ER_ACCESS_DENIED_ERROR') {
-      console.error('❌ Wrong database username or password');
-    }
-
-    if (err.code === 'ER_BAD_DB_ERROR') {
-      console.error('❌ Database does not exist');
-    }
-
-    if (err.code === 'ECONNREFUSED') {
-      console.error('❌ Server refused connection');
-    }
   }
 }
 
-// تشغيل اختبار الاتصال
 testConnection();
 
 module.exports = pool;
