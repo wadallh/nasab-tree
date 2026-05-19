@@ -47,10 +47,16 @@ app.use(
 // CORS (مستقر 100%)
 // =========================
 const allowedOrigins = [
-  'http://localhost:3000',
   'http://localhost:5173',
+  'http://localhost:3000',
+
+  // 🌐 Vercel Frontend
   'https://nasab-tree.vercel.app',
-  'https://nasab-tree.onrender.com',
+
+  // 🌐 Render Backend (نفس السيرفر)
+  'https://nasab-tree-1.onrender.com',
+
+  // 🌐 أي Netlify لو استخدمته
   'https://*.netlify.app'
 ];
 
@@ -59,14 +65,17 @@ app.use(
     origin: (origin, cb) => {
       if (!origin) return cb(null, true);
 
-      const ok = allowedOrigins.some(o => {
+      const allowed = allowedOrigins.some(o => {
         if (o.includes('*')) {
           return new RegExp('^' + o.replace(/\*/g, '.*') + '$').test(origin);
         }
         return o === origin;
       });
 
-      return ok ? cb(null, true) : cb(null, false);
+      if (allowed) return cb(null, true);
+
+      console.log('❌ CORS blocked:', origin);
+      return cb(null, false);
     },
     credentials: true
   })
