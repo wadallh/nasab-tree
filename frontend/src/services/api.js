@@ -1,117 +1,145 @@
 import axios from 'axios'
 
-// ✅ دالة ذكية لتحديد رابط الـ Backend
+// =========================
+// 🌐 تحديد رابط الـ Backend
+// =========================
 const getApiUrl = () => {
-  // 1. أولاً: حاول قراءة متغير البيئة من Vite
   const envUrl = import.meta.env.VITE_API_URL
-  
-  // 2. إذا وُجد المتغير، استخدمه (سواء كان localhost أو Render)
+
+  // لو موجود في البيئة (Vercel / Netlify)
   if (envUrl && envUrl.trim() !== '') {
     return envUrl.trim()
   }
-  
-  // 3. إذا لم يوجد، استخدم رابط التطوير المحلي (localhost)
-  // ✅ تم التعديل: من الإنتاج إلى التطوير المحلي
-  return 'http://localhost:3000'
+
+  // fallback للإنتاج الحقيقي
+  return 'https://nasab-tree-1.onrender.com'
 }
 
-// ✅ احصل على الرابط النهائي
 const API_URL = getApiUrl()
 
 console.log('🔗 API Base URL:', `${API_URL}/api`)
 
+// =========================
+// Axios Instance
+// =========================
 const api = axios.create({
-  // ✅ دمج الرابط مع /api بشكل صحيح
   baseURL: `${API_URL}/api`,
-  headers: { 
+  headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
   },
-  // ✅ إضافة مهلة زمنية للطلبات (10 ثواني)
-  timeout: 10000
+  timeout: 15000
 })
 
-// 🟢 إضافة التوكن لكل طلب تلقائياً
+// =========================
+// 🔐 إضافة التوكن تلقائياً
+// =========================
 api.interceptors.request.use(
-  config => {
+  (config) => {
     const token = localStorage.getItem('token')
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
-      console.log('✅ Token attached:', token.substring(0, 30) + '...')
-    } else {
-      console.warn('⚠️ No token found in localStorage')
+      console.log('🔐 Token attached')
     }
+
     return config
   },
-  error => {
-    console.error('❌ Request interceptor error:', error)
+  (error) => {
+    console.error('❌ Request error:', error)
     return Promise.reject(error)
   }
 )
 
-// 🔴 معالجة الاستجابات والأخطاء
+// =========================
+// 🔴 معالجة الأخطاء
+// =========================
 api.interceptors.response.use(
-  response => {
-    console.log('✅ Response:', response.config.url, response.status)
+  (response) => {
     return response
   },
-  error => {
+  (error) => {
     console.error('❌ API Error:', {
       url: error.config?.url,
       status: error.response?.status,
-      message: error.response?.data?.error
+      message: error.response?.data?.error || error.message
     })
-    
+
+    // إذا انتهت الجلسة
     if (error.response?.status === 401) {
-      console.error('🔑 Token expired or invalid! Clearing storage...')
       localStorage.removeItem('token')
       localStorage.removeItem('user')
-      // إعادة التوجيه لصفحة التسجيل بعد ثانية واحدة
+
       setTimeout(() => {
-        window.location.href = '/register'
-      }, 1000)
+        window.location.href = '/login'
+      }, 800)
     }
-    
+
     return Promise.reject(error)
   }
 )
 
 // =========================
-// دوال API
+// 📌 API FUNCTIONS
 // =========================
 
 // تسجيل الدخول
-export const login = (fullName, phone) => {
-  console.log('📥 Login request:', { fullName, phone })
-  return api.post('/auth/login', { full_name: fullName, phone })
+export const login = (phone, password) => {
+  return api.post('/auth/login', {
+    phone,
+    password
+  })
 }
 
-// جلب الشجرة
+// التسجيل
+export const register = (data) => {
+  return api.post('/auth/register', data)
+}
+
+// بيانات المستخدم
+export const getMe = () => {
+  return api.get('/auth/me')
+}
+
+// الشجرة
 export const getFamilyTree = () => {
-  console.log('🌳 Fetching tree...')
   return api.get('/tree')
 }
 
 // إضافة شخص
-export const addPersonDirect = (data) => api.post('/tree/persons', data)
+export const addPersonDirect = (data) => {
+  return api.post('/tree/persons', data)
+}
 
-// تعديل حالة
-export const updateStatusDirect = (personId, status) => 
-  api.patch(`/tree/persons/${personId}/status`, { status })
+// تحديث الحالة
+export const updateStatusDirect = (personId, status) => {
+  return api.patch(`/tree/persons/${personId}/status`, { status })
+}
 
 // حذف شخص
-export const deletePersonDirect = (personId) => 
-  api.delete(`/tree/persons/${personId}`)
+export const deletePersonDirect = (personId) => {
+  return api.delete(`/tree/persons/${personId}`)
+}
 
-// تقديم طلب
-export const submitRequest = (type, personData) => 
-  api.post('/requests/submit', { type, personData })
+// إرسال طلب
+export const submitRequest = (type, personData) => {
+  return api.post('/requests/submit', {
+    type,
+    personData
+  })
+}
 
-// جلب الطلبات المعلقة
-export const getPendingRequests = () => api.get('/requests/pending')
+// الطلبات المعلقة
+export const getPendingRequests = () => {
+  return api.get('/requests/pending')
+}
 
 // معالجة الطلب
-export const processRequest = (requestId, action, note) => 
-  api.patch(`/requests/${requestId}/process`, { action, admin_note: note })
+export const processRequest = (requestId, action, note) => {
+  return api.patch(`/requests/${requestId}/process`, {
+    action,
+    admin_note: note
+  })
+}
 
 export default api
