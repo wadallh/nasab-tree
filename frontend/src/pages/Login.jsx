@@ -5,7 +5,7 @@ import axios from 'axios'
 
 export default function Login() {
 
-  const API_URL = 'https://nasab-tree.onrender.com/api'
+  const API_URL = 'https://nasab-tree-1.onrender.com/api'
 
   const navigate = useNavigate()
 
