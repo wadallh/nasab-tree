@@ -1,80 +1,30 @@
 const jwt = require('jsonwebtoken');
 
-/**
- * =========================
- * 🔐 التحقق من التوكن
- * =========================
- */
 const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) return res.status(401).json({ error: 'No token' });
+
   try {
-    // قراءة الهيدر بشكل آمن
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader) {
-      console.log('❌ Missing Authorization header');
-      return res.status(401).json({ error: 'لم يتم إرسال التوكن' });
-    }
-
-    // التحقق من صيغة Bearer
-    const parts = authHeader.split(' ');
-
-    if (parts.length !== 2 || parts[0] !== 'Bearer') {
-      console.log('❌ Invalid token format:', authHeader);
-      return res.status(401).json({ error: 'صيغة التوكن غير صحيحة' });
-    }
-
-    const token = parts[1];
-
-    const jwtSecret =
-      process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-
-    // التحقق من التوكن
-    const decoded = jwt.verify(token, jwtSecret);
-
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
     req.user = decoded;
-
-    console.log('✅ Token verified:', {
-      id: decoded.id,
-      role: decoded.role,
-    });
-
     next();
   } catch (err) {
-    console.error('❌ Token verification failed:', err.message);
-
-    return res.status(403).json({
-      error: 'التوكن غير صالح أو منتهي الصلاحية',
-    });
+    return res.status(403).json({ error: 'Invalid token' });
   }
 };
 
-/**
- * =========================
- * 👮 الصلاحيات (Roles)
- * =========================
- */
-const authorizeRoles = (...allowedRoles) => {
+const authorizeRoles = (...roles) => {
   return (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({
-        error: 'يجب تسجيل الدخول أولاً',
-      });
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Forbidden' });
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
-      console.log('❌ Unauthorized role:', req.user.role);
-
-      return res.status(403).json({
-        error: 'ليس لديك صلاحية لهذا الإجراء',
-      });
-    }
-
-    console.log('✅ Role authorized:', req.user.role);
     next();
   };
 };
 
-module.exports = {
-  authenticateToken,
-  authorizeRoles,
-};
+module.exports = { authenticateToken, authorizeRoles };
