@@ -22,7 +22,7 @@ if (isProduction) {
 }
 
 // =========================
-// Security (خفيف ومستقر)
+// Security
 // =========================
 app.use(
   helmet({
@@ -44,7 +44,7 @@ app.use(
 );
 
 // =========================
-// CORS (🔥 التعديل الحاسم هنا)
+// CORS
 // =========================
 const allowedOrigins = [
   'http://localhost:5173',
@@ -54,10 +54,9 @@ const allowedOrigins = [
   'https://*.netlify.app'
 ];
 
-// ✅ دالة مساعدة للتحقق من الأصل
 const checkOrigin = (origin) => {
-  if (!origin) return true; // السماح للطلبات بدون origin (مثل Postman)
-  
+  if (!origin) return true;
+
   return allowedOrigins.some(o => {
     if (o.includes('*')) {
       const regex = new RegExp('^' + o.replace(/\*/g, '.*') + '$');
@@ -74,10 +73,7 @@ const corsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 };
 
-// ✅ تطبيق CORS
 app.use(cors(corsOptions));
-
-// ✅ معالجة صريحة لطلبات OPTIONS (Preflight) - هذا هو الحل!
 app.options('*', cors(corsOptions));
 
 // =========================
@@ -92,7 +88,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // =========================
-// Root Test
+// Root
 // =========================
 app.get('/', (req, res) => {
   res.json({
@@ -103,28 +99,31 @@ app.get('/', (req, res) => {
 });
 
 // =========================
-// Safe Route Loader
+// Route Loader (Fixed & safer)
 // =========================
 function loadRoute(file, name) {
   try {
     const route = require(file);
-    if (!route || typeof route !== 'function' && !route.stack) {
-      console.log(`❌ ${name} invalid export`);
+
+    if (!route) {
+      console.log(`❌ ${name} empty export`);
       return;
     }
+
     app.use(`/api/${name}`, route);
     console.log(`✅ ${name} loaded`);
+
   } catch (e) {
     console.log(`❌ ${name} failed:`, e.message);
   }
 }
 
 // =========================
-// Routes
+// Routes (🔥 FIXED HERE)
 // =========================
 loadRoute('./routes/auth', 'auth');
 loadRoute('./routes/tree', 'tree');
-loadRoute('./requests', 'requests'); // ⚠️ تأكد من المسار: هل هو './routes/requests'؟
+loadRoute('./routes/requests', 'requests'); // ✅ FIXED
 loadRoute('./routes/notifications', 'notifications');
 loadRoute('./routes/backup', 'backup');
 loadRoute('./routes/users', 'users');
@@ -136,11 +135,13 @@ loadRoute('./routes/sessions', 'sessions');
 app.get('/api/health', async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT DATABASE() as db');
+
     res.json({
       status: 'ok',
       db: rows[0].db,
       time: new Date().toISOString()
     });
+
   } catch (err) {
     res.status(500).json({
       status: 'error',
@@ -150,7 +151,7 @@ app.get('/api/health', async (req, res) => {
 });
 
 // =========================
-// 404 API
+// 404
 // =========================
 app.use('/api/*', (req, res) => {
   res.status(404).json({ error: 'API Not Found' });
@@ -165,7 +166,7 @@ app.use((err, req, res, next) => {
 });
 
 // =========================
-// Start Server (Render Safe)
+// Start Server
 // =========================
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
