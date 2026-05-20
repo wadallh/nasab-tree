@@ -44,42 +44,41 @@ app.use(
 );
 
 // =========================
-// CORS (مستقر 100%)
+// CORS (🔥 التعديل الحاسم هنا)
 // =========================
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
-
-  // 🌐 Vercel Frontend
   'https://nasab-tree.vercel.app',
-
-  // 🌐 Render Backend (نفس السيرفر)
   'https://nasab-tree-1.onrender.com',
-
-  // 🌐 أي Netlify لو استخدمته
   'https://*.netlify.app'
 ];
 
-app.use(
-  cors({
-    origin: (origin, cb) => {
-      if (!origin) return cb(null, true);
+// ✅ دالة مساعدة للتحقق من الأصل
+const checkOrigin = (origin) => {
+  if (!origin) return true; // السماح للطلبات بدون origin (مثل Postman)
+  
+  return allowedOrigins.some(o => {
+    if (o.includes('*')) {
+      const regex = new RegExp('^' + o.replace(/\*/g, '.*') + '$');
+      return regex.test(origin);
+    }
+    return o === origin;
+  });
+};
 
-      const allowed = allowedOrigins.some(o => {
-        if (o.includes('*')) {
-          return new RegExp('^' + o.replace(/\*/g, '.*') + '$').test(origin);
-        }
-        return o === origin;
-      });
+const corsOptions = {
+  origin: checkOrigin,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+};
 
-      if (allowed) return cb(null, true);
+// ✅ تطبيق CORS
+app.use(cors(corsOptions));
 
-      console.log('❌ CORS blocked:', origin);
-      return cb(null, false);
-    },
-    credentials: true
-  })
-);
+// ✅ معالجة صريحة لطلبات OPTIONS (Preflight) - هذا هو الحل!
+app.options('*', cors(corsOptions));
 
 // =========================
 // Body Parser
@@ -104,18 +103,15 @@ app.get('/', (req, res) => {
 });
 
 // =========================
-// Safe Route Loader (🔥 مهم جداً)
+// Safe Route Loader
 // =========================
 function loadRoute(file, name) {
   try {
     const route = require(file);
-
-    // 🔴 حماية: لازم يكون router صحيح
     if (!route || typeof route !== 'function' && !route.stack) {
       console.log(`❌ ${name} invalid export`);
       return;
     }
-
     app.use(`/api/${name}`, route);
     console.log(`✅ ${name} loaded`);
   } catch (e) {
@@ -128,7 +124,7 @@ function loadRoute(file, name) {
 // =========================
 loadRoute('./routes/auth', 'auth');
 loadRoute('./routes/tree', 'tree');
-loadRoute('./routes/requests', 'requests');
+loadRoute('./requests', 'requests'); // ⚠️ تأكد من المسار: هل هو './routes/requests'؟
 loadRoute('./routes/notifications', 'notifications');
 loadRoute('./routes/backup', 'backup');
 loadRoute('./routes/users', 'users');
