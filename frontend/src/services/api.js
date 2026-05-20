@@ -17,20 +17,21 @@ const getApiUrl = () => {
 
 const API_URL = getApiUrl()
 
-// ✅ تم التعديل: عرض الرابط الأساسي فقط (بدون تكرار /api)
+// 📊 تسجيل الرابط للتأكد من أنه صحيح (راقب الـ Console)
 console.log('🔗 API Base URL:', API_URL)
+console.log('📦 Environment:', import.meta.env.MODE)
 
 // =========================
 // Axios Instance
 // =========================
 const api = axios.create({
-  // ✅ تم التعديل: نستخدم API_URL كما هي، ونضيف /api في كل دالة لاحقاً
-  baseURL: API_URL,
+  baseURL: API_URL,  // ✅ الرابط الأساسي فقط (بدون /api)
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
   },
-  timeout: 15000
+  timeout: 15000, // 15 ثانية
+  withCredentials: true // ✅ مهم للكوكيز والتوكن
 })
 
 // =========================
@@ -39,12 +40,9 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token')
-
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
-      console.log('🔐 Token attached')
     }
-
     return config
   },
   (error) => {
@@ -57,21 +55,20 @@ api.interceptors.request.use(
 // 🔴 معالجة الأخطاء
 // =========================
 api.interceptors.response.use(
-  (response) => {
-    return response
-  },
+  (response) => response,
   (error) => {
+    // تسجيل مفصل للخطأ للمساعدة في التشخيص
     console.error('❌ API Error:', {
       url: error.config?.url,
+      method: error.config?.method,
       status: error.response?.status,
-      message: error.response?.data?.error || error.message
+      message: error.response?.data?.error || error.response?.data?.message || error.message
     })
 
-    // إذا انتهت الجلسة
+    // إذا انتهت الجلسة (401)
     if (error.response?.status === 401) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
-
       setTimeout(() => {
         window.location.href = '/login'
       }, 800)
@@ -84,14 +81,11 @@ api.interceptors.response.use(
 // =========================
 // 📌 API FUNCTIONS
 // =========================
-// ✅ ملاحظة: جميع المسارات الآن تبدأ بـ /api/ لأن baseURL لم تعد تحتوي عليه
+// ✅ ملاحظة: جميع المسارات تبدأ بـ /api/ لأن baseURL لا يحتوي عليه
 
 // تسجيل الدخول
 export const login = (phone, password) => {
-  return api.post('/api/auth/login', {
-    phone,
-    password
-  })
+  return api.post('/api/auth/login', { phone, password })
 }
 
 // التسجيل
@@ -126,10 +120,7 @@ export const deletePersonDirect = (personId) => {
 
 // إرسال طلب
 export const submitRequest = (type, personData) => {
-  return api.post('/api/requests/submit', {
-    type,
-    personData
-  })
+  return api.post('/api/requests/submit', { type, personData })
 }
 
 // الطلبات المعلقة
