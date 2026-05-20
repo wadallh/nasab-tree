@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Lock, AlertCircle, Check, Eye, EyeOff } from 'lucide-react'
-import axios from 'axios'
+
+// ✅ استيراد مثيل axios الموحد من المجلد المركزي
+import api from '../api/axios'
 
 export default function ChangePassword() {
   const navigate = useNavigate()
@@ -13,7 +15,7 @@ export default function ChangePassword() {
   const [loading, setLoading] = useState(false)
   
   const isFirstTime = location.state?.isFirstTime || false
-  const token = localStorage.getItem('token')
+  // ✅ تم حذف جلب التوكن يدوياً (الـ interceptor يتكفل به تلقائياً)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -29,11 +31,13 @@ export default function ChangePassword() {
     
     setLoading(true)
     try {
-      await axios.post('/api/auth/change-password', {
+      // ✅ تم التعديل:
+      // 1. استخدام api بدلاً من axios
+      // 2. مسار نسبي فقط '/auth/...' (بدون تكرار /api)
+      // 3. حذف headers لأن التوكن يُضاف تلقائياً عبر interceptor
+      await api.post('/auth/change-password', {
         current_password: isFirstTime ? form.current || '000000' : form.current,
         new_password: form.new
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
       })
       
       setSuccess('✅ تم تغيير كلمة المرور بنجاح!')

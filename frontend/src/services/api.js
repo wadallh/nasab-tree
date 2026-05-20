@@ -1,139 +1,85 @@
-import axios from 'axios'
+// src/services/api.js
+// ✅ هذا الملف الآن يعتمد على النظام الموحد لـ API
+// تم حذف التكرار وجعل كل المسارات تدار من ملف واحد: ../api/axios
 
-// =========================
-// 🌐 تحديد رابط الـ Backend
-// =========================
-const getApiUrl = () => {
-  const envUrl = import.meta.env.VITE_API_URL
-
-  // لو موجود في البيئة (Vercel / Netlify)
-  if (envUrl && envUrl.trim() !== '') {
-    return envUrl.trim()
-  }
-
-  // fallback للإنتاج الحقيقي
-  return 'https://nasab-tree-1.onrender.com'
-}
-
-const API_URL = getApiUrl()
-
-// 📊 تسجيل الرابط للتأكد من أنه صحيح (راقب الـ Console)
-console.log('🔗 API Base URL:', API_URL)
-console.log('📦 Environment:', import.meta.env.MODE)
-
-// =========================
-// Axios Instance
-// =========================
-const api = axios.create({
-  baseURL: API_URL,  // ✅ الرابط الأساسي فقط (بدون /api)
-  headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
-  },
-  timeout: 15000, // 15 ثانية
-  withCredentials: true // ✅ مهم للكوكيز والتوكن
-})
-
-// =========================
-// 🔐 إضافة التوكن تلقائياً
-// =========================
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token')
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-    }
-    return config
-  },
-  (error) => {
-    console.error('❌ Request error:', error)
-    return Promise.reject(error)
-  }
-)
-
-// =========================
-// 🔴 معالجة الأخطاء
-// =========================
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    // تسجيل مفصل للخطأ للمساعدة في التشخيص
-    console.error('❌ API Error:', {
-      url: error.config?.url,
-      method: error.config?.method,
-      status: error.response?.status,
-      message: error.response?.data?.error || error.response?.data?.message || error.message
-    })
-
-    // إذا انتهت الجلسة (401)
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
-      setTimeout(() => {
-        window.location.href = '/login'
-      }, 800)
-    }
-
-    return Promise.reject(error)
-  }
-)
+import api from '../api/axios' // ✅ استيراد مثيل axios الموحد
 
 // =========================
 // 📌 API FUNCTIONS
 // =========================
-// ✅ ملاحظة: جميع المسارات تبدأ بـ /api/ لأن baseURL لا يحتوي عليه
+// ✅ ملاحظة هامة: جميع المسارات الآن نسبية (بدون /api/) 
+// لأن baseURL في ملف config.js يحتوي على /api مسبقاً
+// مثال: '/auth/login' + baseURL '.../api' = '.../api/auth/login' ✅
+
+// -------------------------
+// 🔐 المصادقة (Auth)
+// -------------------------
 
 // تسجيل الدخول
 export const login = (phone, password) => {
-  return api.post('/api/auth/login', { phone, password })
+  return api.post('/auth/login', { phone, password })
 }
 
 // التسجيل
 export const register = (data) => {
-  return api.post('/api/auth/register', data)
+  return api.post('/auth/register', data)
 }
 
-// بيانات المستخدم
+// بيانات المستخدم الحالي
 export const getMe = () => {
-  return api.get('/api/auth/me')
+  return api.get('/auth/me')
 }
 
-// الشجرة
+// -------------------------
+// 🌳 إدارة الشجرة (Tree)
+// -------------------------
+
+// جلب الشجرة العائلية
 export const getFamilyTree = () => {
-  return api.get('/api/tree')
+  return api.get('/tree')
 }
 
-// إضافة شخص
+// إضافة شخص مباشر (للمشرفين)
 export const addPersonDirect = (data) => {
-  return api.post('/api/tree/persons', data)
+  return api.post('/tree/persons', data)
 }
 
-// تحديث الحالة
+// تحديث حالة شخص (حي/متوفي/شهيد)
 export const updateStatusDirect = (personId, status) => {
-  return api.patch(`/api/tree/persons/${personId}/status`, { status })
+  return api.patch(`/tree/persons/${personId}/status`, { status })
 }
 
 // حذف شخص
 export const deletePersonDirect = (personId) => {
-  return api.delete(`/api/tree/persons/${personId}`)
+  return api.delete(`/tree/persons/${personId}`)
 }
 
-// إرسال طلب
+// -------------------------
+// 📋 إدارة الطلبات (Requests)
+// -------------------------
+
+// إرسال طلب جديد (إضافة/تعديل)
 export const submitRequest = (type, personData) => {
-  return api.post('/api/requests/submit', { type, personData })
+  return api.post('/requests/submit', { type, personData })
 }
 
-// الطلبات المعلقة
+// جلب الطلبات المعلقة للمراجعة
 export const getPendingRequests = () => {
-  return api.get('/api/requests/pending')
+  return api.get('/requests/pending')
 }
 
-// معالجة الطلب
+// معالجة طلب (موافقة/رفض)
 export const processRequest = (requestId, action, note) => {
-  return api.patch(`/api/requests/${requestId}/process`, {
+  return api.patch(`/requests/${requestId}/process`, {
     action,
     admin_note: note
   })
 }
+
+// -------------------------
+// 🔄 دوال إضافية مستقبلية
+// -------------------------
+// يمكن إضافة أي دالة جديدة بنفس النمط:
+// export const myNewFunction = (params) => api.get('/my/endpoint', { params })
 
 export default api

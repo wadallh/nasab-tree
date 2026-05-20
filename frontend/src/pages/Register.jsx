@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { UserPlus, User, Phone, Lock, AlertCircle } from 'lucide-react'
 
-// ✅ استيراد مثيل axios المُعد مسبقاً
-import api from '../services/api'
+// ✅ استيراد مثيل axios الموحد من المجلد المركزي
+import api from '../api/axios'
 
 export default function Register() {
   const navigate = useNavigate()
@@ -22,7 +22,9 @@ export default function Register() {
     
     setLoading(true)
     try {
-      await api.post('/api/auth/register', {
+      // ✅ تم التعديل: استخدام مسار نسبي فقط (بدون تكرار /api)
+      // لأن baseURL في ملف axios.js يحتوي بالفعل على /api
+      await api.post('/auth/register', {
         full_name: form.full_name.trim(),
         phone: form.phone.trim(),
         password: form.password

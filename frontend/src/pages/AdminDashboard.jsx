@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Users, Activity, Heart, Skull, Shield, Clock, CheckCircle, XCircle } from 'lucide-react'
+
+// ✅ استيراد مثيل axios الموحد من المجلد المركزي
+import api from '../api/axios'
+// ✅ استيراد دوال الخدمة (يجب تحديث ملف ../services/api ليعتمد على api الموحد أيضاً)
 import { getPendingRequests, processRequest } from '../services/api'
 
 export default function AdminPanel({ user, onLogout }) {
@@ -15,10 +19,10 @@ export default function AdminPanel({ user, onLogout }) {
 
   const loadData = async () => {
     try {
-      // جلب الإحصائيات (يمكن تعديلها حسب API الخاص بك)
-      const treeRes = await fetch('/api/tree')
-      const treeData = await treeRes.json()
-      const persons = treeData.persons || []
+      // ✅ تم التعديل: استخدام api الموحد بدلاً من fetch
+      // المسار النسبي فقط، والرابط الأساسي + التوكن يُضافان تلقائياً
+      const treeRes = await api.get('/tree')
+      const persons = treeRes.data?.persons || []
       
       setStats({
         total: persons.length,
@@ -27,7 +31,7 @@ export default function AdminPanel({ user, onLogout }) {
         martyr: persons.filter(p => p.status === 'martyr').length
       })
 
-      // جلب الطلبات المعلقة
+      // جلب الطلبات المعلقة (عبر دوال الخدمة)
       const reqRes = await getPendingRequests()
       setRequests(reqRes.data?.requests || [])
     } catch (err) {
@@ -40,11 +44,12 @@ export default function AdminPanel({ user, onLogout }) {
   const handleProcessRequest = async (requestId, action) => {
     try {
       const note = prompt(action === 'approve' ? 'ملاحظة الموافقة (اختياري):' : 'سبب الرفض:') || ''
+      // ✅ دالة processRequest يجب أن تستخدم api الموحد داخلياً أيضاً
       await processRequest(requestId, action, note)
       alert(action === 'approve' ? '✅ تمت الموافقة على الطلب' : '❌ تم رفض الطلب')
       loadData()
     } catch (err) {
-      alert('خطأ: ' + err.message)
+      alert('خطأ: ' + (err.response?.data?.error || err.message || 'عملية غير ناجحة'))
     }
   }
 

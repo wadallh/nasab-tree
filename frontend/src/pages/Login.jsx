@@ -1,11 +1,9 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { LogIn, Phone, Lock, AlertCircle, Eye, EyeOff } from 'lucide-react'
-import axios from 'axios'
+import api from '../api/axios' // ✅ استيراد مثيل axios الموحد
 
 export default function Login() {
-
-  const API_URL = 'https://nasab-tree-1.onrender.com/api'
 
   const navigate = useNavigate()
 
@@ -33,8 +31,9 @@ export default function Login() {
 
     try {
 
-      const res = await axios.post(
-        `${API_URL}/auth/login`,
+      // ✅ تم التعديل: استخدام api الموحد مع مسار نسبي فقط
+      const res = await api.post(
+        '/auth/login',
         {
           phone: form.phone.trim(),
           password: form.password
