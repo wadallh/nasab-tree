@@ -1,6 +1,10 @@
+// backend/src/controllers/treeController.js
 const { v4: uuidv4 } = require('uuid');
 const pool = require('../db');
 
+// =========================
+// 🌳 جلب الشجرة العائلية
+// =========================
 exports.getFamilyTree = async (req, res) => {
   try {
     const [persons] = await pool.query(
@@ -13,6 +17,9 @@ exports.getFamilyTree = async (req, res) => {
   }
 };
 
+// =========================
+// 👤 إضافة شخص مباشر
+// =========================
 exports.addPersonDirect = async (req, res) => {
   try {
     const { first_name, full_name, father_name, status, birth_date, death_date, bio, parent_id, family_tree_id } = req.body;
@@ -21,7 +28,8 @@ exports.addPersonDirect = async (req, res) => {
 
     const formatDate = (date) => {
       if (!date) return null;
-      return date.split('T')[0];
+      const d = new Date(date);
+      return isNaN(d.getTime()) ? null : d.toISOString().split('T')[0];
     };
 
     await pool.query(
@@ -29,13 +37,13 @@ exports.addPersonDirect = async (req, res) => {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
       [
         id, 
-        first_name, 
-        full_name, 
-        father_name, 
+        first_name?.trim(), 
+        full_name?.trim(), 
+        father_name?.trim(), 
         status || 'alive', 
         formatDate(birth_date), 
         formatDate(death_date), 
-        bio || null, 
+        bio?.trim() || null, 
         parent_id || null, 
         family_tree_id || 1, 
         added_by
@@ -50,6 +58,9 @@ exports.addPersonDirect = async (req, res) => {
   }
 };
 
+// =========================
+// ✏️ تحديث بيانات شخص (كامل)
+// =========================
 exports.updatePersonDirect = async (req, res) => {
   try {
     const { id } = req.params;
@@ -57,10 +68,11 @@ exports.updatePersonDirect = async (req, res) => {
 
     const formatDate = (date) => {
       if (!date) return null;
-      return date.split('T')[0];
+      const d = new Date(date);
+      return isNaN(d.getTime()) ? null : d.toISOString().split('T')[0];
     };
 
-    await pool.query(
+    const [result] = await pool.query(
       `UPDATE persons SET 
         full_name = ?, 
         status = ?, 
@@ -70,14 +82,18 @@ exports.updatePersonDirect = async (req, res) => {
         updated_at = NOW() 
        WHERE id = ?`,
       [
-        full_name, 
+        full_name?.trim(), 
         status, 
         formatDate(birth_date), 
         formatDate(death_date), 
-        bio || null, 
+        bio?.trim() || null, 
         id
       ]
     );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'الشخص غير موجود' });
+    }
 
     console.log('✅ Person updated successfully:', id);
     res.json({ message: 'تم التحديث بنجاح' });
@@ -87,28 +103,67 @@ exports.updatePersonDirect = async (req, res) => {
   }
 };
 
-exports.updateStatusDirect = async (req, res) => {
+// =========================
+// 🔄 تحديث حالة شخص فقط (✅ تم تعديل الاسم ليطابق الـ Route)
+// =========================
+// ⚠️ هذا هو التعديل الحاسم: تغيير الاسم من updateStatusDirect إلى updatePersonStatusDirect
+exports.updatePersonStatusDirect = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { personId } = req.params; // ✅ ملاحظة: الـ Route يستخدم personId وليس id
     const { status } = req.body;
+    
+    // التحقق من صحة الحالة
     if (!status || !['alive', 'deceased', 'martyr'].includes(status)) {
-      return res.status(400).json({ error: 'حالة غير صالحة' });
+      return res.status(400).json({ error: 'حالة غير صالحة. القيم المسموحة: alive, deceased, martyr' });
     }
-    await pool.query('UPDATE persons SET status = ?, updated_at = NOW() WHERE id = ?', [status, id]);
-    res.json({ message: 'تم التحديث بنجاح' });
+    
+    const [result] = await pool.query(
+      'UPDATE persons SET status = ?, updated_at = NOW() WHERE id = ?', 
+      [status, personId]
+    );
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'الشخص غير موجود' });
+    }
+    
+    console.log('✅ Status updated successfully:', personId);
+    res.json({ message: 'تم تحديث الحالة بنجاح' });
   } catch (err) {
     console.error('❌ Update Status Error:', err);
-    res.status(500).json({ error: 'فشل تحديث الحالة' });
+    res.status(500).json({ error: 'فشل تحديث الحالة: ' + err.message });
   }
 };
 
+// =========================
+// 🗑️ حذف شخص
+// =========================
 exports.deletePersonDirect = async (req, res) => {
   try {
     const { id } = req.params;
-    await pool.query('DELETE FROM persons WHERE id = ?', [id]);
+    
+    // ⚠️ تحقق اختياري: هل الشخص له أبناء؟ (يمكن تفعيله لاحقاً)
+    // const [children] = await pool.query('SELECT id FROM persons WHERE parent_id = ?', [id]);
+    // if (children.length > 0) {
+    //   return res.status(400).json({ error: 'لا يمكن حذف شخص لديه أبناء' });
+    // }
+    
+    const [result] = await pool.query('DELETE FROM persons WHERE id = ?', [id]);
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'الشخص غير موجود' });
+    }
+    
+    console.log('✅ Person deleted successfully:', id);
     res.json({ message: 'تم الحذف بنجاح' });
   } catch (err) {
     console.error('❌ Delete Person Error:', err);
-    res.status(500).json({ error: 'فشل حذف الفرد' });
+    res.status(500).json({ error: 'فشل حذف الفرد: ' + err.message });
   }
 };
+
+// =========================
+// 🔗 Alias للتوافق مع الأسماء القديمة (اختياري)
+// =========================
+// هذا السطر يضمن أن أي كود قديم يستخدم الاسم القديم لا ينكسر
+// يمكنك حذفه إذا كنت متأكداً أن كل الكود يستخدم الأسماء الجديدة
+// exports.updateStatusDirect = exports.updatePersonStatusDirect;
