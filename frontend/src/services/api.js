@@ -17,13 +17,15 @@ const getApiUrl = () => {
 
 const API_URL = getApiUrl()
 
-console.log('🔗 API Base URL:', `${API_URL}/api`)
+// ✅ تم التعديل: عرض الرابط الأساسي فقط (بدون تكرار /api)
+console.log('🔗 API Base URL:', API_URL)
 
 // =========================
 // Axios Instance
 // =========================
 const api = axios.create({
-  baseURL: `${API_URL}/api`,
+  // ✅ تم التعديل: نستخدم API_URL كما هي، ونضيف /api في كل دالة لاحقاً
+  baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
@@ -82,10 +84,11 @@ api.interceptors.response.use(
 // =========================
 // 📌 API FUNCTIONS
 // =========================
+// ✅ ملاحظة: جميع المسارات الآن تبدأ بـ /api/ لأن baseURL لم تعد تحتوي عليه
 
 // تسجيل الدخول
 export const login = (phone, password) => {
-  return api.post('/auth/login', {
+  return api.post('/api/auth/login', {
     phone,
     password
   })
@@ -93,37 +96,37 @@ export const login = (phone, password) => {
 
 // التسجيل
 export const register = (data) => {
-  return api.post('/auth/register', data)
+  return api.post('/api/auth/register', data)
 }
 
 // بيانات المستخدم
 export const getMe = () => {
-  return api.get('/auth/me')
+  return api.get('/api/auth/me')
 }
 
 // الشجرة
 export const getFamilyTree = () => {
-  return api.get('/tree')
+  return api.get('/api/tree')
 }
 
 // إضافة شخص
 export const addPersonDirect = (data) => {
-  return api.post('/tree/persons', data)
+  return api.post('/api/tree/persons', data)
 }
 
 // تحديث الحالة
 export const updateStatusDirect = (personId, status) => {
-  return api.patch(`/tree/persons/${personId}/status`, { status })
+  return api.patch(`/api/tree/persons/${personId}/status`, { status })
 }
 
 // حذف شخص
 export const deletePersonDirect = (personId) => {
-  return api.delete(`/tree/persons/${personId}`)
+  return api.delete(`/api/tree/persons/${personId}`)
 }
 
 // إرسال طلب
 export const submitRequest = (type, personData) => {
-  return api.post('/requests/submit', {
+  return api.post('/api/requests/submit', {
     type,
     personData
   })
@@ -131,12 +134,12 @@ export const submitRequest = (type, personData) => {
 
 // الطلبات المعلقة
 export const getPendingRequests = () => {
-  return api.get('/requests/pending')
+  return api.get('/api/requests/pending')
 }
 
 // معالجة الطلب
 export const processRequest = (requestId, action, note) => {
-  return api.patch(`/requests/${requestId}/process`, {
+  return api.patch(`/api/requests/${requestId}/process`, {
     action,
     admin_note: note
   })
