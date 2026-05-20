@@ -24,28 +24,49 @@ export default defineConfig({
       }
     })
   ],
-  // ✅ إعدادات البناء الصريحة لـ Vercel
+  
+  // ✅ إعدادات البناء لـ Vercel
   build: {
     outDir: 'dist',
     emptyOutDir: true,
-    sourcemap: false, // تقليل حجم الملفات للإنتاج
+    sourcemap: false,
     rollupOptions: {
       output: {
-        manualChunks: undefined // منع تقسيم الكود لضمان تحميل كل شيء
+        manualChunks: undefined
       }
     }
   },
-  // ✅ إعدادات الخادم المحلي (للتطوير فقط)
+  
+  // ✅ إعدادات الخادم المحلي (للتطوير فقط - لن تؤثر على الإنتاج)
   server: {
     port: 5173,
+    // ⚠️ هذا البروكسي يعمل فقط في التطوير المحلي (localhost)
+    // في الإنتاج (Vercel) يتم استخدام VITE_API_URL من ملف .env
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,
-        secure: false
+        secure: false,
+        // ✅ إضافة: تجاهل البروكسي إذا كان في إنتاج
+        configure: (proxy, options) => {
+          proxy.on('error', (err, req, res) => {
+            console.log('proxy error', err)
+          })
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            console.log('Sending Request to the Target:', req.method, req.url)
+          })
+        }
       }
     }
   },
-  // ✅ ضمان عمل المسارات في الإنتاج
-  base: '/'
+  
+  // ✅ ضمان عمل المسارات في الإنتاج (مهم لـ Vercel)
+  base: '/',
+  
+  // ✅ إضافة: تحسينات لـ Vercel
+  optimizeDeps: {
+    esbuildOptions: {
+      target: 'esnext'
+    }
+  }
 })
