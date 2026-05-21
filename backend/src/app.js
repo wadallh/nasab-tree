@@ -191,7 +191,7 @@ function loadRoute(filePath, routeName) {
 }
 
 // =========================
-✅ تسجيل جميع المسارات
+//✅ تسجيل جميع المسارات
 // =========================
 const routes = [
   { path: './routes/auth', name: 'auth' },
