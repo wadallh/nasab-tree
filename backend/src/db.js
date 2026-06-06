@@ -4,11 +4,10 @@ const { Pool } = require('pg');
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false // مهم لـ Supabase
+    rejectUnauthorized: false
   }
 });
 
-// اختبار الاتصال
 pool.on('connect', () => {
   console.log('✅ Connected to Supabase PostgreSQL');
 });
