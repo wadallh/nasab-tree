@@ -18,7 +18,6 @@ const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
 const PORT = process.env.PORT || 3000;
 
-// الثقة في البروكسي العكسي (مهم لـ Vercel/Nginx)
 if (isProduction) {
   app.set('trust proxy', 1);
 }
@@ -46,22 +45,21 @@ if (isProduction) {
 }
 
 // =========================
-// 🛡️ تحديد معدل الطلبات (مهم للإنتاج)
+// 🛡️ تحديد معدل الطلبات
 // =========================
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 دقيقة
-  max: isProduction ? 100 : 1000, // عدد الطلبات المسموحة
+  windowMs: 15 * 60 * 1000,
+  max: isProduction ? 100 : 1000,
   message: { error: 'Too many requests, please try again later' },
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => !isProduction, // تعطيل في التطوير
-  // ✅ إصلاح مشكلة IPv6 validation
+  skip: (req) => !isProduction,
   validate: { xForwardedForHeader: false, ip: false }
 });
 app.use('/api', limiter);
 
 // =========================
-// 🔒 CORS Configuration (محدّث للإنتاج)
+// 🔒 CORS Configuration
 // =========================
 const allowedOrigins = [
   'http://localhost:5173',
@@ -69,9 +67,8 @@ const allowedOrigins = [
   process.env.FRONTEND_URL || 'https://nasab-tree.vercel.app',
 ].filter(Boolean);
 
-// دالة مساعدة للتحقق من النطاقات مع دعم الـ wildcards
 const isOriginAllowed = (origin) => {
-  if (!origin) return true; // السماح بالطلبات بدون origin
+  if (!origin) return true;
   return allowedOrigins.some(allowed => {
     if (allowed.includes('*')) {
       const regex = new RegExp(allowed.replace(/\*/g, '.*'));
@@ -97,7 +94,6 @@ const corsOptions = {
   maxAge: 86400
 };
 
-// ✅ السماح بجميع النطاقات في التطوير فقط
 if (!isProduction) {
   corsOptions.origin = true;
 }
@@ -110,19 +106,17 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// تسجيل الطلبات في التطوير فقط
 if (!isProduction) {
   const morgan = require('morgan');
   app.use(morgan('dev'));
 }
 
 // =========================
-// 📁 ملفات الـ Uploads (مع حماية)
+// 📁 ملفات الـ Uploads
 // =========================
 const uploadsPath = path.join(__dirname, '../uploads');
 app.use('/uploads', express.static(uploadsPath, {
   setHeaders: (res, filepath) => {
-    // منع تنفيذ ملفات السكريبت في مجلد الـ uploads
     if (/\.(js|php|exe|sh)$/i.test(filepath)) {
       res.setHeader('Content-Disposition', 'attachment');
     }
@@ -130,7 +124,7 @@ app.use('/uploads', express.static(uploadsPath, {
 }));
 
 // =========================
-// 🛣️ Routes (مع معالجة الأخطاء)
+// 🛣️ Routes
 // =========================
 const loadRoute = (path, name) => {
   try {
@@ -141,15 +135,11 @@ const loadRoute = (path, name) => {
     return true;
   } catch (err) {
     console.error(`❌ Failed to load ${name} routes:`, err.message);
-    if (isProduction) {
-      // في الإنتاج، لا نوقف السيرفر بسبب روت واحد
-      return false;
-    }
-    throw err; // في التطوير، نوقف لمعرفة الخطأ فوراً
+    if (isProduction) return false;
+    throw err;
   }
 };
 
-// تحميل الروتات
 loadRoute('./routes/auth', 'auth');
 loadRoute('./routes/tree', 'tree');
 loadRoute('./routes/requests', 'requests');
@@ -159,29 +149,18 @@ loadRoute('./routes/users', 'users');
 loadRoute('./routes/sessions', 'sessions');
 
 // =========================
-// 🔍 Debug: عرض المسارات (تطوير فقط)
-// =========================
-if (!isProduction) {
-  console.log('\n🗺️  Registered API Routes:');
-  app._router.stack.forEach(r => {
-    if (r.route && r.route.path) {
-      const methods = Object.keys(r.route.methods).join('|').toUpperCase();
-      console.log(`   ${methods} ${r.route.path}`);
-    }
-  });
-  console.log('');
-}
-
-// =========================
-// 🏥 Health Check (موسّع)
+// 🏥 Health Check (معدل لـ PostgreSQL)
 // =========================
 app.get('/api/health', async (req, res) => {
   try {
-    const [dbRows] = await pool.query('SELECT DATABASE() as db, VERSION() as version');
-    const poolStats = pool._pool ? {
-      active: pool._pool._allConnections.length - pool._pool._freeConnections.length,
-      idle: pool._pool._freeConnections?.length || 0,
-      waiting: pool._pool._connectionQueue?.length || 0
+    // ✅ استعلام متوافق مع PostgreSQL
+    const dbResult = await pool.query('SELECT current_database() as db, version() as version');
+    const dbRows = dbResult.rows;
+    
+    const poolStats = pool.totalCount ? {
+      total: pool.totalCount,
+      idle: pool.idleCount,
+      waiting: pool.waitingCount
     } : {};
 
     res.json({ 
@@ -209,51 +188,33 @@ app.get('/api/health', async (req, res) => {
 // ❌ 404 Handler
 // =========================
 app.use('/api/*', (req, res) => {
-  console.warn(`⚠️  404 - Endpoint not found: ${req.method} ${req.originalUrl}`);
   res.status(404).json({ 
     error: 'Endpoint not found', 
-    path: req.originalUrl,
-    method: req.method,
-    hint: isProduction ? undefined : 'تأكد من أن المسار صحيح وأن الـ Route مسجل في app.js'
+    path: req.originalUrl
   });
 });
 
 // =========================
-// 🌍 Global Error Handler (محسّن)
+// 🌍 Global Error Handler
 // =========================
 app.use((err, req, res, next) => {
-  // أخطاء CORS
   if (err.message === 'Not allowed by CORS') {
     return res.status(403).json({ error: 'CORS policy violation' });
   }
   
-  // أخطاء حجم الطلب
-  if (err.type === 'entity.too.large') {
-    return res.status(413).json({ error: 'Request entity too large' });
-  }
-
-  // أخطاء تحليل JSON
-  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
-    return res.status(400).json({ error: 'Invalid JSON payload' });
-  }
-
   console.error('💥 Unhandled error:', {
     message: err.message,
-    stack: isProduction ? undefined : err.stack,
-    path: req.path,
-    method: req.method,
-    ip: req.ip
+    path: req.path
   });
 
   res.status(500).json({ 
     error: 'Internal server error', 
-    message: isProduction ? 'Something went wrong' : err.message,
-    requestId: req.id || Date.now().toString(36)
+    message: isProduction ? 'Something went wrong' : err.message
   });
 });
 
 // =========================
-// 🚀 Start Server مع إغلاق آمن
+// 🚀 Start Server
 // =========================
 let server;
 
@@ -261,46 +222,27 @@ const startServer = () => {
   server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🚀 Backend running on http://localhost:${PORT}`);
     console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🗄️  Database: ${process.env.DB_NAME || 'nasab_db'}`);
-    if (!isProduction) {
-      console.log(`🔒 CORS enabled for: ${allowedOrigins.join(', ')}`);
-    }
     console.log('');
-  });
-
-  // معالجة الأخطاء على مستوى السيرفر
-  server.on('error', (err) => {
-    console.error('💥 Server error:', err);
-    if (err.code === 'EADDRINUSE') {
-      console.error(`❌ Port ${PORT} is already in use`);
-      process.exit(1);
-    }
   });
 };
 
 // =========================
-// 🔄 إغلاق آمن للسيرفر والـ Pool
+// 🔄 إغلاق آمن
 // =========================
 const gracefulShutdown = async (signal) => {
   console.log(`\n🛑 Received ${signal}. Starting graceful shutdown...`);
-  
   if (server) {
     server.close(async () => {
       console.log('🔌 HTTP server closed');
       try {
         await pool.end();
-        console.log('🗄️  Database pool closed');
+        console.log('🗄️ Database pool closed');
       } catch (err) {
         console.error('❌ Error closing database pool:', err);
       }
       process.exit(0);
     });
-
-    // إغلاق قسري بعد 10 ثواني إذا لم يغلق بشكل طبيعي
-    setTimeout(() => {
-      console.error('❌ Could not close connections in time, forcefully shutting down');
-      process.exit(1);
-    }, 10000);
+    setTimeout(() => process.exit(1), 10000);
   } else {
     process.exit(0);
   }
@@ -309,7 +251,6 @@ const gracefulShutdown = async (signal) => {
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
-// بدء التشغيل
 startServer();
 
 module.exports = app;
